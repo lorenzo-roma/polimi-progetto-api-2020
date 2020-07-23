@@ -71,15 +71,20 @@ typedef struct editorRowList {
 
 EditorRowList editorRowList;
 
-void pushRow(EditorRowListNode** list, char* c)
+void pushRow(char* c)
 {
     EditorRowListNode* newRow = (EditorRowListNode*)malloc(sizeof(EditorRowListNode));
     newRow->content = c;
-    newRow->prev = (*list);
+    if(editorRowList.tail!=NULL){
+        newRow->prev = editorRowList.tail;
+    } else {
+        newRow->prev = NULL;
+    }
     newRow->next = NULL;
-    if ((*list) != NULL) (*list)->next = newRow;
+    if (editorRowList.tail != NULL) editorRowList.tail->next = newRow;
     if(editorRowList.head == NULL) editorRowList.head = newRow;
-    (*list) = newRow;
+    editorRowList.tail = newRow;
+    editorRowList.length++;
 }
 
 void printList(CommandListNode* node)
@@ -101,19 +106,42 @@ EditorRowListNode* getRowAt(int index){
 }
 
 char* getRowContent(){
-    return "ciao\n";
+    char *row = NULL;
+    int c;
+    size_t size = 0, len = 0;
+    while((c=getchar()) != EOF && c != '\n'){
+        if(len+1 >= size){
+            if(size==1000){
+                size = 1025;
+            } else {
+                size += 200;
+            }
+            row = realloc(row, size);
+        }
+        row[len++] = c;
+    }
+    if(row != NULL){
+        row[len++] = '\n';
+        row[len] = '\0';
+    }
+    return row;
+}
+
+void replaceText(EditorRowListNode* row, char* txt){
+    row->content = txt;
 }
 
 void executeChange(Command cmd){
+    pushCommand(cmd);
     EditorRowListNode* row = getRowAt(cmd.arg1);
     int rows = cmd.arg2 - cmd.arg1 + 1;
     for(int i = 0; i<rows; i++){
         char* text = getRowContent();
         if(row==NULL){
-            pushRow(&editorRowList.tail, text);
+            pushRow(text);
             row = editorRowList.tail;
         }else{
-            //replaceText(row, text);
+            replaceText(row, text);
         }
         row = row->next;
     }
@@ -133,12 +161,43 @@ void executePrint(Command cmd){
     }
 }
 
+void executeDelete(Command cmd){
+    pushCommand(cmd);
+    if(cmd.arg1>editorRowList.length) return;
+    EditorRowListNode* row = getRowAt(cmd.arg1);
+    EditorRowListNode* prevRow  = row->prev;
+    if(cmd.arg1==1){
+        if(cmd.arg2>=editorRowList.length){
+            editorRowList.head = NULL;
+            editorRowList.tail = NULL;
+            editorRowList.length = 0;
+            return;
+        }
+        editorRowList.head = getRowAt(cmd.arg2+1);
+        editorRowList.length -= cmd.arg2;
+        return;
+    }
+    if(cmd.arg2>=editorRowList.length){
+        prevRow -> next = NULL;
+        editorRowList.tail = getRowAt(cmd.arg1-1);
+        editorRowList.length = cmd.arg1-1;
+        return;
+    }
+    int rows = cmd.arg2 - cmd.arg1 + 1;
+    for(int i = 0; i<rows; i++){
+        row = row->next;
+    }
+    prevRow -> next = row;
+    editorRowList.length -= rows;
+}
+
 void executeCommand(Command cmd){
     switch (cmd.type) {
         case 'c':
             executeChange(cmd);
             break;
         case 'd':
+            executeDelete(cmd);
             break;
         case 'u':
             break;
@@ -160,9 +219,8 @@ int main() {
     editorRowList.tail = NULL;
     editorRowList.length = 0;
 
-    for (int i=0; i<4; i++){
+    for (int i=0; i<99; i++){
         Command command = getCommand(cmdRaw);
-        pushCommand(command);
         executeCommand(command);
     }
     //printf("%lu",sizeof(cmd.arg1));

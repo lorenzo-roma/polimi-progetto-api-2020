@@ -6,7 +6,11 @@
 
 #IncludeRegexTransform: 
 
-/home/lorenzo/CLionProjects/api-proj/main.c
+/cygdrive/c/Users/Master/Documents/Development/api-proj/main.c
 stdio.h
+-
+string.h
+-
+stdlib.h
 -
 

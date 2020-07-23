@@ -1,7 +1,8 @@
 file(REMOVE_RECURSE
   "CMakeFiles/api-proj.dir/main.c.o"
-  "api-proj"
+  "api-proj.exe"
   "api-proj.pdb"
+  "libapi-proj.dll.a"
 )
 
 # Per-language clean rules from dependency scanning.

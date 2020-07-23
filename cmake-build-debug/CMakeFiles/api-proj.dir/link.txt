@@ -1,1 +1,1 @@
-/usr/bin/cc -g   CMakeFiles/api-proj.dir/main.c.o  -o api-proj 
+/usr/bin/cc -g  -Wl,--enable-auto-import CMakeFiles/api-proj.dir/main.c.o  -o api-proj.exe -Wl,--out-implib,libapi-proj.dll.a -Wl,--major-image-version,0,--minor-image-version,0 
