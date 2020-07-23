@@ -71,6 +71,14 @@ typedef struct editorRowList {
 
 EditorRowList editorRowList;
 
+typedef struct stringStack {
+    struct stringStack* prev;
+    char* content;
+} StringStack;
+
+StringStack changedStack;
+StringStack deletedStack;
+
 void pushRow(char* c)
 {
     EditorRowListNode* newRow = (EditorRowListNode*)malloc(sizeof(EditorRowListNode));
@@ -211,13 +219,19 @@ void executeCommand(Command cmd){
     }
 }
 
-int main() {
-    char cmdRaw[MAX_LINE_LENGTH+1];
+void initStructure(){
     commandList.items = NULL;
     commandList.length = 0;
     editorRowList.head = NULL;
     editorRowList.tail = NULL;
     editorRowList.length = 0;
+    changedStack.prev = NULL;
+    deletedStack.prev = NULL;
+}
+
+int main() {
+    char cmdRaw[MAX_LINE_LENGTH+1];
+    initStructure();
 
     for (int i=0; i<99; i++){
         Command command = getCommand(cmdRaw);
