@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+
 #define MAX_LINE_LENGTH 1024
 
 
@@ -12,37 +13,36 @@ typedef struct command {
 
 typedef struct commandNode {
     Command command;
-    struct commandNode* next;
-    struct commandNode* prev;
+    struct commandNode *next;
+    struct commandNode *prev;
 } CommandListNode;
 
 typedef struct commandList {
-    CommandListNode* items;
+    CommandListNode *items;
     int length;
 } CommandList;
 
 CommandList commandList;
 
-Command getCommand(char *cmd){
+Command getCommand(char *cmd) {
     printf("Insert command\n");
     fgets(cmd, MAX_LINE_LENGTH, stdin);
-    if(strcmp(cmd, "q\n")==0) return (Command){.arg1=-1, .arg2=-1, .type='q'};
+    if (strcmp(cmd, "q\n") == 0) return (Command) {.arg1=-1, .arg2=-1, .type='q'};
     char *ptr;
     int arg1 = (int) strtol(cmd, &ptr, 10);
     int arg2 = -1;
     char type;
-    if(*ptr=='u'||*ptr=='r') {
+    if (*ptr == 'u' || *ptr == 'r') {
         type = *ptr;
-    }else{
-        arg2 = (int) strtol(ptr+1, &ptr, 10);
+    } else {
+        arg2 = (int) strtol(ptr + 1, &ptr, 10);
         type = *ptr;
     }
-    return (Command){.arg1 = arg1, .arg2 = arg2, .type = type};
+    return (Command) {.arg1 = arg1, .arg2 = arg2, .type = type};
 }
 
-void pushCommand(Command cmd)
-{
-    CommandListNode* newCommand = (CommandListNode*)malloc(sizeof(CommandListNode));
+void pushCommand(Command cmd) {
+    CommandListNode *newCommand = (CommandListNode *) malloc(sizeof(CommandListNode));
     newCommand->command = cmd;
     newCommand->prev = (*(&commandList.items));
     newCommand->next = NULL;
@@ -50,7 +50,7 @@ void pushCommand(Command cmd)
     (*(&commandList.items)) = newCommand;
 }
 
-void printCommand(Command cmd){
+void printCommand(Command cmd) {
     printf("Printing cmd\n");
     printf("cmd.arg1 = %d\n", cmd.arg1);
     printf("cmd.arg2 = %d\n", cmd.arg2);
@@ -58,46 +58,38 @@ void printCommand(Command cmd){
 }
 
 typedef struct editorNode {
-    char* content;
-    struct editorNode* next;
-    struct editorNode* prev;
+    char *content;
+    struct editorNode *next;
+    struct editorNode *prev;
 } EditorRowListNode;
 
 typedef struct editorRowList {
-    EditorRowListNode* tail;
-    EditorRowListNode* head;
+    EditorRowListNode *tail;
+    EditorRowListNode *head;
     int length;
 } EditorRowList;
 
 EditorRowList editorRowList;
+EditorRowList changedRowList;
+EditorRowList deletedRowList;
 
-typedef struct stringStack {
-    struct stringStack* prev;
-    char* content;
-} StringStack;
-
-StringStack changedStack;
-StringStack deletedStack;
-
-void pushRow(char* c)
-{
-    EditorRowListNode* newRow = (EditorRowListNode*)malloc(sizeof(EditorRowListNode));
+void pushRow(EditorRowList *list, char *c) {
+    EditorRowListNode *newRow = (EditorRowListNode *) malloc(sizeof(EditorRowListNode));
     newRow->content = c;
-    if(editorRowList.tail!=NULL){
-        newRow->prev = editorRowList.tail;
+    if (list->head != NULL) {
+        newRow->prev = list->head;
     } else {
         newRow->prev = NULL;
     }
     newRow->next = NULL;
-    if (editorRowList.tail != NULL) editorRowList.tail->next = newRow;
-    if(editorRowList.head == NULL) editorRowList.head = newRow;
-    editorRowList.tail = newRow;
-    editorRowList.length++;
+    if (list->head != NULL) list->head->next = newRow;
+    if (list->tail == NULL) list->tail = newRow;
+    list->head = newRow;
+    list->length++;
 }
 
-void printList(CommandListNode* node)
-{
-    CommandListNode* last;
+void printList(CommandListNode *node) {
+    CommandListNode *last;
     while (node != NULL) {
         printCommand(node->command);
         last = node;
@@ -105,21 +97,21 @@ void printList(CommandListNode* node)
     }
 }
 
-EditorRowListNode* getRowAt(int index){
-    EditorRowListNode* ptr = editorRowList.head;
-    for(int i = 1; i<index; i++){
+EditorRowListNode *getRowAt(int index) {
+    EditorRowListNode *ptr = editorRowList.tail;
+    for (int i = 1; i < index; i++) {
         ptr = ptr->next;
     }
     return ptr;
 }
 
-char* getRowContent(){
+char *getRowContent() {
     char *row = NULL;
     int c;
     size_t size = 0, len = 0;
-    while((c=getchar()) != EOF && c != '\n'){
-        if(len+1 >= size){
-            if(size==1000){
+    while ((c = getchar()) != EOF && c != '\n') {
+        if (len + 1 >= size) {
+            if (size == 1000) {
                 size = 1025;
             } else {
                 size += 200;
@@ -128,78 +120,102 @@ char* getRowContent(){
         }
         row[len++] = c;
     }
-    if(row != NULL){
+    if (row != NULL) {
         row[len++] = '\n';
         row[len] = '\0';
     }
     return row;
 }
 
-void replaceText(EditorRowListNode* row, char* txt){
+void replaceText(EditorRowListNode *row, char *txt) {
+    pushRow(&changedRowList, row->content);
     row->content = txt;
 }
 
-void executeChange(Command cmd){
+void executeChange(Command cmd) {
     pushCommand(cmd);
-    EditorRowListNode* row = getRowAt(cmd.arg1);
+    EditorRowListNode *row = getRowAt(cmd.arg1);
     int rows = cmd.arg2 - cmd.arg1 + 1;
-    for(int i = 0; i<rows; i++){
-        char* text = getRowContent();
-        if(row==NULL){
-            pushRow(text);
-            row = editorRowList.tail;
-        }else{
+    for (int i = 0; i < rows; i++) {
+        char *text = getRowContent();
+        if (row == NULL) {
+            pushRow(&changedRowList, NULL);
+            pushRow(&editorRowList, text);
+            row = editorRowList.head;
+        } else {
             replaceText(row, text);
         }
         row = row->next;
     }
 }
 
-void executePrint(Command cmd){
-    EditorRowListNode* row = getRowAt(cmd.arg1);
+void executePrint(Command cmd) {
+    EditorRowListNode *row = getRowAt(cmd.arg1);
     int rows = cmd.arg2 - cmd.arg1 + 1;
-    for(int i = 0; i<rows; i++){
-        if(row==NULL){
+    for (int i = 0; i < rows; i++) {
+        if (row == NULL) {
             printf(".\n");
             continue;
-        }else{
-            printf("%s",row->content);
+        } else {
+            printf("%s", row->content);
         }
         row = row->next;
     }
 }
 
-void executeDelete(Command cmd){
+void deleteRows(EditorRowListNode *start, int rows){
+    start->prev = NULL;
+    EditorRowListNode *tmp = start;
+    for(int i =1; i<rows; i++) tmp = tmp->next;
+    tmp->next = NULL;
+    if(deletedRowList.head != NULL){
+        deletedRowList.head->next = start;
+    } else {
+        deletedRowList.tail = start;
+    }
+    deletedRowList.head = tmp;
+}
+
+void executeDelete(Command cmd) {
     pushCommand(cmd);
-    if(cmd.arg1>editorRowList.length) return;
-    EditorRowListNode* row = getRowAt(cmd.arg1);
-    EditorRowListNode* prevRow  = row->prev;
-    if(cmd.arg1==1){
-        if(cmd.arg2>=editorRowList.length){
+    if (cmd.arg1 > editorRowList.length) return;
+    EditorRowListNode *row = getRowAt(cmd.arg1);
+    EditorRowListNode *prevRow = row->prev;
+    if (cmd.arg1 == 1) {
+        if (cmd.arg2 >= editorRowList.length) {
+            //ottimizzabile
+            deleteRows(editorRowList.tail, editorRowList.length);
             editorRowList.head = NULL;
             editorRowList.tail = NULL;
             editorRowList.length = 0;
             return;
         }
-        editorRowList.head = getRowAt(cmd.arg2+1);
+        EditorRowListNode *tmp = editorRowList.tail;
+        editorRowList.tail = getRowAt(cmd.arg2 + 1);
+        deleteRows(tmp, cmd.arg2);
+        editorRowList.tail->prev = NULL;
         editorRowList.length -= cmd.arg2;
         return;
     }
-    if(cmd.arg2>=editorRowList.length){
-        prevRow -> next = NULL;
-        editorRowList.tail = getRowAt(cmd.arg1-1);
-        editorRowList.length = cmd.arg1-1;
+    if (cmd.arg2 >= editorRowList.length) {
+        prevRow->next = NULL;
+        editorRowList.head = getRowAt(cmd.arg1 - 1);
+        deleteRows(row, editorRowList.length-cmd.arg1+1);
+        editorRowList.head->next = NULL;
+        editorRowList.length = cmd.arg1 - 1;
         return;
     }
     int rows = cmd.arg2 - cmd.arg1 + 1;
-    for(int i = 0; i<rows; i++){
+    EditorRowListNode *tmp = row;
+    for (int i = 0; i < rows; i++) {
         row = row->next;
     }
-    prevRow -> next = row;
+    prevRow->next = row;
+    deleteRows(tmp, rows);
     editorRowList.length -= rows;
 }
 
-void executeCommand(Command cmd){
+void executeCommand(Command cmd) {
     switch (cmd.type) {
         case 'c':
             executeChange(cmd);
@@ -219,27 +235,31 @@ void executeCommand(Command cmd){
     }
 }
 
-void initStructure(){
+void initStructure() {
     commandList.items = NULL;
     commandList.length = 0;
     editorRowList.head = NULL;
     editorRowList.tail = NULL;
     editorRowList.length = 0;
-    changedStack.prev = NULL;
-    deletedStack.prev = NULL;
+    changedRowList.head = NULL;
+    changedRowList.tail = NULL;
+    changedRowList.length = 0;
+    deletedRowList.head = NULL;
+    deletedRowList.tail = NULL;
+    deletedRowList.length = 0;
 }
 
 int main() {
-    char cmdRaw[MAX_LINE_LENGTH+1];
+    char cmdRaw[MAX_LINE_LENGTH + 1];
     initStructure();
 
-    for (int i=0; i<99; i++){
+    for (int i = 0; i < 99; i++) {
         Command command = getCommand(cmdRaw);
         executeCommand(command);
     }
     //printf("%lu",sizeof(cmd.arg1));
     //do{
-     //   execute(getCommand(cmdRaw));
+    //   execute(getCommand(cmdRaw));
     //}while(1);
     return 0;
 }
