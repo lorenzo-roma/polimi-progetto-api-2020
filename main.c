@@ -182,8 +182,13 @@ void pushRow(EditorRowList *list, char *c) {
 EditorRowListNode *popRow(EditorRowList *list) {
     if (list->length == 0) printf("Error, trying to pop empty stack!");
     EditorRowListNode *res = list->head;
-    list->head = list->head->prev;
-    list->head->next = NULL;
+    if(list->length == 1){
+        list->head = NULL;
+        list->tail = NULL;
+    } else {
+        list->head = list->head->prev;
+        list->head->next = NULL;
+    }
     list->length--;
     return res;
 }
@@ -373,6 +378,7 @@ void executeCommand(Command cmd) {
 
 void undoCommands(int moves) {
     moves *=-1;
+    if(moves>commandList.currentCommandIndex) moves = commandList.currentCommandIndex;
     for (int i = 0; i < moves; i++) {
         undoCommand(commandList.currentCommand->command);
         commandList.currentCommand = commandList.currentCommand->prev;
@@ -395,9 +401,10 @@ void undoChange(Command cmd) {
         if(replace->content==NULL){
             toFree = row;
             row = row->prev;
-            row->next = NULL;
+            if(row!=NULL) row->next = NULL;
             free(toFree);
             editorRowList.head = row;
+            if(row==NULL) editorRowList.tail = NULL;
             editorRowList.length--;
         } else {
             row->content = replace->content;
