@@ -17,6 +17,8 @@ typedef struct commandNode {
 } CommandListNode;
 
 typedef struct commandList {
+    CommandListNode *currentCommand;
+    int currentCommandIndex;
     CommandListNode *items;
     int length;
 } CommandList;
@@ -34,6 +36,10 @@ typedef struct editorRowList {
 } EditorRowList;
 
 Command getCommand(char *cmd);
+
+void freeCommands();
+
+void freeTemp();
 
 void pushCommand(Command cmd);
 
@@ -74,7 +80,6 @@ void undoDelete(Command cmd);
 void initStructure();
 
 CommandList commandList;
-CommandListNode *currentCommand;
 EditorRowList editorRowList;
 EditorRowList changedRowList;
 EditorRowList deletedRowList;
@@ -108,7 +113,39 @@ Command getCommand(char *cmd) {
     return (Command) {.arg1 = arg1, .arg2 = arg2, .type = type};
 }
 
+void freeCommands(){
+    commandList.items = commandList.currentCommand;
+    CommandListNode *cmd = commandList.currentCommand->next;
+    CommandListNode *toFree;
+    do{
+        toFree = cmd;
+        cmd = cmd->next;
+        free(toFree);
+        commandList.length--;
+    } while (cmd!=NULL);
+}
+
+void freeTemp(){
+    if(tempRowList.tail!=NULL){
+        EditorRowListNode *tmp = tempRowList.tail;
+        EditorRowListNode *toFree;
+        do{
+            toFree = tmp;
+            tmp = tmp->next;
+            free(toFree);
+        } while (tmp != NULL);
+    }
+    tempRowList.head = NULL;
+    tempRowList.tail = NULL;
+}
+
 void pushCommand(Command cmd) {
+    if(commandList.currentCommand!=NULL){
+        if(commandList.currentCommand->next!=NULL){
+            freeCommands();
+            freeTemp();
+        }
+    }
     CommandListNode *newCommand = (CommandListNode *) malloc(sizeof(CommandListNode));
     newCommand->command = cmd;
     newCommand->prev = commandList.items;
@@ -116,7 +153,8 @@ void pushCommand(Command cmd) {
     if (commandList.items != NULL) (commandList.items)->next = newCommand;
     (commandList.items) = newCommand;
     commandList.length++;
-    currentCommand = newCommand;
+    commandList.currentCommandIndex++;
+    commandList.currentCommand = newCommand;
 }
 
 void printCommand(Command cmd) {
@@ -334,9 +372,11 @@ void executeCommand(Command cmd) {
 }
 
 void undoCommands(int moves) {
+    moves *=-1;
     for (int i = 0; i < moves; i++) {
-        undoCommand(currentCommand->command);
-        currentCommand = currentCommand->prev;
+        undoCommand(commandList.currentCommand->command);
+        commandList.currentCommand = commandList.currentCommand->prev;
+        commandList.currentCommandIndex--;
     }
 }
 
@@ -357,6 +397,8 @@ void undoChange(Command cmd) {
             row = row->prev;
             row->next = NULL;
             free(toFree);
+            editorRowList.head = row;
+            editorRowList.length--;
         } else {
             row->content = replace->content;
             row = row->prev;
@@ -369,7 +411,8 @@ void undoDelete(Command cmd) {}
 void initStructure() {
     commandList.items = NULL;
     commandList.length = 0;
-    currentCommand = NULL;
+    commandList.currentCommand = NULL;
+    commandList.currentCommandIndex = 0;
     editorRowList.head = NULL;
     editorRowList.tail = NULL;
     editorRowList.length = 0;
