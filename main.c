@@ -35,6 +35,8 @@ typedef struct editorRowList {
     int length;
 } EditorRowList;
 
+typedef enum {false, true} bool;
+
 Command getCommand(char *cmd);
 
 void freeCommands();
@@ -76,6 +78,8 @@ void undoCommand(Command cmd);
 void undoChange(Command cmd);
 
 void undoDelete(Command cmd);
+
+bool isEmpty(EditorRowList *list);
 
 void initStructure();
 
@@ -305,7 +309,10 @@ void deleteRows(EditorRowListNode *start, int rows) {
 
 void executeDelete(Command cmd) {
     pushCommand(cmd);
-    if (cmd.arg1 > editorRowList.length) return;
+    if (cmd.arg1 > editorRowList.length){
+        commandList.items->command.arg1 = -1;
+        return;
+    }
     EditorRowListNode *row = getRowAt(cmd.arg1);
     EditorRowListNode *prevRow = row->prev;
     if (cmd.arg1 == 1) {
@@ -418,40 +425,64 @@ void undoChange(Command cmd) {
 }
 
 void undoDelete(Command cmd) {
+    if(cmd.arg1==-1) return;
     EditorRowListNode *row = getRowAt(cmd.arg1);
+    EditorRowListNode *toInsert;
     int rows = cmd.arg2-cmd.arg1+1;
-    if(row==NULL){
-        EditorRowListNode *final = deletedRowList.head;
-        for(int i = 1; i<rows; i++) deletedRowList.head = deletedRowList.head->prev;
-        if(editorRowList.head!=NULL){
-            editorRowList.head->next = deletedRowList.head;
-        }else{
-            editorRowList.head = deletedRowList.head;
-            editorRowList.tail = deletedRowList.head;
+    if(cmd.arg1==1){
+        for(int i = 0;i<rows;i++){
+            toInsert = popRow(&deletedRowList);
+            if(i==0&&isEmpty(&editorRowList)){
+                editorRowList.head = toInsert;
+                editorRowList.tail = toInsert;
+                editorRowList.length++;
+                toInsert->next = NULL;
+                row = toInsert;
+            } else {
+                row->prev = toInsert;
+                toInsert->next = row;
+                row = row->prev;
+                editorRowList.length++;
+            }
         }
-        deletedRowList.head = deletedRowList.head->prev;
-    } else{
-        EditorRowListNode *prevRow = row->prev;
-        row->prev = deletedRowList.head;
-        deletedRowList.head->next = row;
-        for(int i = 1; i<rows; i++) deletedRowList.head = deletedRowList.head->prev;
-        if(cmd.arg1!=1){
-            prevRow->next = deletedRowList.head;
-            deletedRowList.head = deletedRowList.head->prev;
-            prevRow->next->prev = prevRow;
+        row->prev = NULL;
+        editorRowList.tail = row;
+    } else {
+        if(row!=NULL){
+            EditorRowListNode *prevRow = row->prev;
+            for(int i = 0; i<rows; i++){
+                toInsert = popRow(&deletedRowList);
+                row->prev = toInsert;
+                toInsert->next = row;
+                row = toInsert;
+                editorRowList.length++;
+            }
+            row->prev = prevRow;
+            prevRow->next = row;
         } else {
-            editorRowList.tail = deletedRowList.head;
-            deletedRowList.head = deletedRowList.head->prev;
-            editorRowList.tail->prev = NULL;
+            EditorRowListNode *prevHead = editorRowList.head;
+            for(int i = 0;i<rows;i++){
+                toInsert = popRow(&deletedRowList);
+                if(i==0){
+                    editorRowList.head = toInsert;
+                    editorRowList.length++;
+                    toInsert->next = NULL;
+                    row = toInsert;
+                } else {
+                    row->prev = toInsert;
+                    toInsert->next = row;
+                    row = row->prev;
+                    editorRowList.length++;
+                }
+            }
+            row->prev = prevHead;
+            prevHead->next = row;
         }
     }
-    if(deletedRowList.head != NULL){
-        deletedRowList.head->next = NULL;
-    }else{
-        deletedRowList.tail = NULL;
-    }
-    editorRowList.length+=rows;
-    deletedRowList.length-=rows;
+}
+
+bool isEmpty(EditorRowList *list){
+    return (list->length==0)? true : false;
 }
 
 void initStructure() {
