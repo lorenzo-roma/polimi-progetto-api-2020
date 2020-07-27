@@ -290,7 +290,7 @@ void executePrint(Command cmd) {
 }
 
 void deleteRows(EditorRowListNode *start, int rows) {
-    start->prev = NULL;
+    start->prev = deletedRowList.head;
     EditorRowListNode *tmp = start;
     for (int i = 1; i < rows; i++) tmp = tmp->next;
     tmp->next = NULL;
@@ -300,6 +300,7 @@ void deleteRows(EditorRowListNode *start, int rows) {
         deletedRowList.tail = start;
     }
     deletedRowList.head = tmp;
+    deletedRowList.length+=rows;
 }
 
 void executeDelete(Command cmd) {
@@ -311,6 +312,7 @@ void executeDelete(Command cmd) {
         if (cmd.arg2 >= editorRowList.length) {
             //ottimizzabile
             deleteRows(editorRowList.tail, editorRowList.length);
+            commandList.items->command.arg2 = editorRowList.length;
             editorRowList.head = NULL;
             editorRowList.tail = NULL;
             editorRowList.length = 0;
@@ -327,6 +329,7 @@ void executeDelete(Command cmd) {
         prevRow->next = NULL;
         editorRowList.head = getRowAt(cmd.arg1 - 1);
         deleteRows(row, editorRowList.length - cmd.arg1 + 1);
+        commandList.items->command.arg2 = editorRowList.length;
         editorRowList.head->next = NULL;
         editorRowList.length = cmd.arg1 - 1;
         return;
@@ -337,6 +340,7 @@ void executeDelete(Command cmd) {
         row = row->next;
     }
     prevRow->next = row;
+    row->prev = prevRow;
     deleteRows(tmp, rows);
     editorRowList.length -= rows;
 }
@@ -413,7 +417,42 @@ void undoChange(Command cmd) {
     }
 }
 
-void undoDelete(Command cmd) {}
+void undoDelete(Command cmd) {
+    EditorRowListNode *row = getRowAt(cmd.arg1);
+    int rows = cmd.arg2-cmd.arg1+1;
+    if(row==NULL){
+        EditorRowListNode *final = deletedRowList.head;
+        for(int i = 1; i<rows; i++) deletedRowList.head = deletedRowList.head->prev;
+        if(editorRowList.head!=NULL){
+            editorRowList.head->next = deletedRowList.head;
+        }else{
+            editorRowList.head = deletedRowList.head;
+            editorRowList.tail = deletedRowList.head;
+        }
+        deletedRowList.head = deletedRowList.head->prev;
+    } else{
+        EditorRowListNode *prevRow = row->prev;
+        row->prev = deletedRowList.head;
+        deletedRowList.head->next = row;
+        for(int i = 1; i<rows; i++) deletedRowList.head = deletedRowList.head->prev;
+        if(cmd.arg1!=1){
+            prevRow->next = deletedRowList.head;
+            deletedRowList.head = deletedRowList.head->prev;
+            prevRow->next->prev = prevRow;
+        } else {
+            editorRowList.tail = deletedRowList.head;
+            deletedRowList.head = deletedRowList.head->prev;
+            editorRowList.tail->prev = NULL;
+        }
+    }
+    if(deletedRowList.head != NULL){
+        deletedRowList.head->next = NULL;
+    }else{
+        deletedRowList.tail = NULL;
+    }
+    editorRowList.length+=rows;
+    deletedRowList.length-=rows;
+}
 
 void initStructure() {
     commandList.items = NULL;
