@@ -65,19 +65,25 @@ void executePrint(Command cmd);
 
 void deleteRows(EditorRowListNode *start, int rows);
 
-void executeDelete(Command cmd);
+void executeDelete(Command cmd, bool isRedo);
 
-void executeUndo(Command cmd);
+void executeUndoRedo(Command cmd);
 
 void executeCommand(Command cmd);
+
+void redoCommands(int moves);
+
+void redoCommand(Command cmd);
+
+void redoChange(Command cmd);
 
 void undoCommands(int moves);
 
 void undoCommand(Command cmd);
 
-void undoChange(Command cmd);
-
 void undoDelete(Command cmd);
+
+void undoChange(Command cmd);
 
 bool isEmpty(EditorRowList *list);
 
@@ -98,16 +104,13 @@ int main() {
     }
 }
 
-
 Command getCommand(char *cmd) {
-    //printf("Insert command\n");
-    char *outcome = fgets(cmd, MAX_LINE_LENGTH, stdin);
-    if (outcome == NULL) {
-        printf("Error while reading command!");
-        getchar();
-    }
-
+    char* outcome = fgets(cmd, MAX_LINE_LENGTH, stdin);
     if (strcmp(cmd, "q\n") == 0) return (Command) {.arg1=-1, .arg2=-1, .type='q'};
+    if(outcome == NULL){
+        printf("Error while reading command! |%s|", cmd);
+        exit(1);
+    }
     char *ptr;
     int arg1 = (int) strtol(cmd, &ptr, 10);
     int arg2 = -1;
@@ -279,7 +282,7 @@ void executePrint(Command cmd) {
     EditorRowListNode *row;
     int rows;
     if (cmd.arg1 == 0) {
-        printf(".\r\n");
+        printf(".\n");
         row = getRowAt(cmd.arg1 + 1);
         rows = cmd.arg2 - cmd.arg1;
     } else {
@@ -288,7 +291,7 @@ void executePrint(Command cmd) {
     }
     for (int i = 0; i < rows; i++) {
         if (row == NULL) {
-            printf(".\r\n");
+            printf(".\n");
             continue;
         } else {
             printf("%s", row->content);
@@ -311,8 +314,9 @@ void deleteRows(EditorRowListNode *start, int rows) {
     deletedRowList.length+=rows;
 }
 
-void executeDelete(Command cmd) {
-    pushCommand(cmd);
+void executeDelete(Command cmd, bool isRedo) {
+    if(cmd.arg1==-1) return;
+    if(!isRedo) pushCommand(cmd);
     if (cmd.arg1 > editorRowList.length){
         commandList.items->command.arg1 = -1;
         return;
@@ -356,17 +360,18 @@ void executeDelete(Command cmd) {
     editorRowList.length -= rows;
 }
 
-void executeUndo(Command cmd) {
-    int moves = -cmd.arg1;
+void executeUndoRedo(Command cmd) {
+    int moves = cmd.arg1;
+    if(cmd.type == 'u') moves*=-1;
     Command command;
-    char cmdRaw[MAX_LINE_LENGTH + 1];
+    char raw[MAX_LINE_LENGTH + 1];
     do {
-        command = getCommand(cmdRaw);
+        command = getCommand(raw);
         if (command.type == 'u') moves -= command.arg1;
         if (command.type == 'r') moves += command.arg1;
     } while (command.type == 'u' || command.type == 'r');
     if (moves < 0) undoCommands(moves);
-    //if(moves>0) redoCommands(moves);
+    if(moves > 0) redoCommands(moves);
     executeCommand(command);
 }
 
@@ -376,18 +381,53 @@ void executeCommand(Command cmd) {
             executeChange(cmd);
             break;
         case 'd':
-            executeDelete(cmd);
+            executeDelete(cmd, false);
             break;
         case 'u':
-            executeUndo(cmd);
+            executeUndoRedo(cmd);
             break;
         case 'r':
+            executeUndoRedo(cmd);
             break;
         case 'p':
             executePrint(cmd);
             break;
         case 'q':
             exit(0);
+    }
+}
+
+void redoCommands(int moves){
+    int availableCommands = commandList.length-commandList.currentCommandIndex;
+    if(moves>availableCommands) moves = availableCommands;
+    for(int i = 0; i<moves; i++){
+        commandList.currentCommand = commandList.currentCommand->next;
+        commandList.currentCommandIndex++;
+        redoCommand(commandList.currentCommand->command);
+    }
+}
+
+void redoCommand(Command cmd){
+    if(cmd.type == 'c') redoChange(cmd);
+    if(cmd.type == 'd') executeDelete(cmd, true);
+}
+
+void redoChange(Command cmd){
+    EditorRowListNode *row = getRowAt(cmd.arg1);
+    EditorRowListNode *toFree;
+    int rows = cmd.arg2 - cmd.arg1 + 1;
+    for (int i = 0; i < rows; i++) {
+        toFree = popRow(&tempRowList);
+        char *text = toFree->content;
+        if (row == NULL) {
+            pushRow(&changedRowList, NULL);
+            pushRow(&editorRowList, text);
+            row = editorRowList.head;
+        } else {
+            replaceText(row, text);
+        }
+        //free(toFree);
+        row = row->next;
     }
 }
 
