@@ -102,7 +102,11 @@ int main() {
 Command getCommand(char *cmd) {
     //printf("Insert command\n");
     char *outcome = fgets(cmd, MAX_LINE_LENGTH, stdin);
-    if (outcome == NULL) printf("Error while reading command!");
+    if (outcome == NULL) {
+        printf("Error while reading command!");
+        getchar();
+    }
+
     if (strcmp(cmd, "q\n") == 0) return (Command) {.arg1=-1, .arg2=-1, .type='q'};
     char *ptr;
     int arg1 = (int) strtol(cmd, &ptr, 10);
