@@ -27,6 +27,12 @@ y
 C:/Users/Master/Documents/Development/api-proj/tests/timeforachange_public_test/Time_for_a_change_1_input.txt
 C:/Users/Master/Documents/Development/api-proj/tests/timeforachange_public_test/Time_for_a_change_1_output.txt
 y
-C:/Users/Master/Documents/Development/api-proj/tests/timeforachange_public_test/Time_for_a_change_2_input.txt
-C:/Users/Master/Documents/Development/api-proj/tests/timeforachange_public_test/Time_for_a_change_2_output.txt
+C:/Users/Master/Documents/Development/api-proj/tests/timeforachange_public_test/Time_for_a_change_1_input.txt
+C:/Users/Master/Documents/Development/api-proj/tests/timeforachange_public_test/Time_for_a_change_1_output.txt
+y
+C:/Users/Master/Documents/Development/api-proj/tests/rollingback_public_tests/Rolling_Back_1_input.txt
+C:/Users/Master/Documents/Development/api-proj/tests/rollingback_public_tests/Rolling_Back_1_output.txt
+y
+C:/Users/Master/Documents/Development/api-proj/tests/rollingback_public_tests/Rolling_Back_2_input.txt
+C:/Users/Master/Documents/Development/api-proj/tests/rollingback_public_tests/Rolling_Back_2_output.txt
 n
