@@ -157,6 +157,7 @@ void freeTemp() {
         do {
             toFree = tmp;
             tmp = tmp->next;
+            free(toFree->content);
             free(toFree);
             tempRowList.length--;
         } while (tmp != NULL);
@@ -465,7 +466,7 @@ void redoChange(Command cmd) {
         } else {
             replaceText(row, text);
         }
-        //free(toFree);
+        free(toFree);
         row = row->next;
     }
 }
