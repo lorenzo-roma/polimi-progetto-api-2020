@@ -4,6 +4,8 @@
 
 #define MAX_LINE_LENGTH 1024
 
+//lowMemory branch
+
 typedef struct command {
     int arg1;
     int arg2;
