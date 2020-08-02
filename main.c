@@ -257,25 +257,18 @@ EditorRowListNode *getRowAt(int index) {
 }
 
 char *getRowContent() {
-    char *row = NULL;
+    char row[1025];
     int c;
-    size_t size = 0, len = 0;
+    size_t len = 0;
     while ((c = getchar()) != EOF && c != '\n') {
-        if (len + 1 >= size) {
-            if (size == 1000) {
-                size = 1025;
-            } else {
-                size += 200;
-            }
-            row = realloc(row, size);
-        }
         row[len++] = c;
     }
-    if (row != NULL) {
         row[len++] = '\n';
-        row[len] = '\0';
-    }
-    return row;
+        row[len++] = '\0';
+
+    char* res = (char *) malloc(len);
+    memcpy(res, row, len );
+    return res;
 }
 
 void replaceText(EditorRowListNode *row, char *txt) {
