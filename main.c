@@ -499,6 +499,7 @@ void undoChange(Command cmd) {
         } else {
             row->content = replace->content;
             row = row->prev;
+            free(replace);
         }
     }
 }
