@@ -76,6 +76,10 @@ int getCommandIndex(int prevIndex, int moves);
 
 void executeUndoRedo(Command cmd);
 
+void debugCheckList(EditorRowList list);
+
+void debugCheckLists();
+
 void executeCommand(Command cmd);
 
 void redoCommands(int moves);
@@ -89,6 +93,8 @@ void undoCommands(int moves);
 void undoCommand(Command cmd);
 
 void undoDelete(Command cmd);
+
+void bindNodes(EditorRowListNode *first, EditorRowListNode *second);
 
 void undoChange(Command cmd);
 
@@ -239,6 +245,7 @@ void printList(CommandListNode *node) {
 }
 
 EditorRowListNode *getRowAt(int index) {
+    if(index < 1) return NULL;
     if (index > editorRowList.length) return NULL;
     int distFromHead = editorRowList.length - index;
     if (distFromHead < index) {
@@ -406,7 +413,31 @@ void executeUndoRedo(Command cmd) {
     executeCommand(command);
 }
 
+void debugCheckList(EditorRowList list){
+    EditorRowListNode *r = list.tail;
+    if(list.length==0 && list.tail==NULL&& list.head == NULL) return;
+    for(int i = 1; i<list.length; i++){
+        r = r->next;
+    }
+    if(r->next!=NULL && r!=list.head){
+        printf("Error");
+    }
+    for(int i = 1; i<list.length; i++){
+        r = r->prev;
+    }
+    if(r->prev!=NULL && r!=list.tail){
+        printf("Error");
+    }
+}
+void debugCheckLists(){
+    debugCheckList(editorRowList);
+    debugCheckList(changedRowList);
+    debugCheckList(deletedRowList);
+    debugCheckList(tempRowList);
+}
+
 void executeCommand(Command cmd) {
+    //debugCheckLists();
     switch (cmd.type) {
         case 'c':
             executeChange(cmd);
@@ -447,7 +478,60 @@ void redoCommand(Command cmd) {
     if (cmd.type == 'd') executeDelete(cmd, true);
 }
 
-void redoChange(Command cmd) {
+void redoChange(Command cmd){
+    EditorRowListNode *newChangeStart = getRowAt(cmd.arg1);
+    EditorRowListNode *newChangeEnd = getRowAt(cmd.arg2);
+    EditorRowListNode *firstX = getRowAt(cmd.arg1-1);
+    EditorRowListNode *secondX =  (newChangeEnd!= NULL)?newChangeEnd->next : NULL;
+    EditorRowListNode *oldTmpStart = tempRowList.head;
+    EditorRowListNode *oldTmpEnd = tempRowList.head;
+    int rows = cmd.arg2-cmd.arg1+1;
+    int finalChangedLength = changedRowList.length += rows;
+    for(int i = 1; i<rows; i++) oldTmpStart = oldTmpStart->prev;
+    tempRowList.head = oldTmpStart->prev;
+    if(tempRowList.head!=NULL){
+        tempRowList.head->next = NULL;
+    } else {
+        tempRowList.tail = NULL;
+    }
+    tempRowList.length-=rows;
+    if(tempRowList.length == 1) tempRowList.tail = tempRowList.head;  //eliminabile?
+    if(firstX!=NULL){
+        bindNodes(firstX, oldTmpStart);
+    } else {
+        editorRowList.tail = oldTmpStart;
+        editorRowList.tail->prev = NULL;
+    }
+    bindNodes(oldTmpEnd, secondX);
+    if(secondX==NULL) editorRowList.head = oldTmpEnd;
+    if(editorRowList.length==0){
+        for(int i = 0; i<rows; i++) pushRow(&changedRowList, NULL);
+        editorRowList.length= cmd.arg2;
+    } else {
+        if(changedRowList.head!=NULL){
+            bindNodes(changedRowList.head, newChangeStart);
+        } else {
+            changedRowList.tail = newChangeStart;
+            changedRowList.tail->prev= NULL;
+        }
+        if(newChangeEnd==NULL){
+            if(newChangeStart!=NULL){
+                while(newChangeStart->next != NULL){
+                    newChangeStart = newChangeStart->next;
+                }
+                changedRowList.head = newChangeStart;
+            }
+            for(int i = 0; i<cmd.arg2-editorRowList.length; i++) pushRow(&changedRowList, NULL);
+            editorRowList.length = cmd.arg2;
+        } else {
+            bindNodes(newChangeEnd, NULL);
+            changedRowList.head = newChangeEnd;
+        }
+    }
+    changedRowList.length = finalChangedLength;
+}
+/*
+void redoChangeOld(Command cmd) {
     EditorRowListNode *row = getRowAt(cmd.arg1);
     EditorRowListNode *toFree;
     int rows = cmd.arg2 - cmd.arg1 + 1;
@@ -464,7 +548,7 @@ void redoChange(Command cmd) {
         free(toFree);
         row = row->next;
     }
-}
+}*/
 
 void undoCommands(int moves) {
     moves *= -1;
@@ -480,8 +564,8 @@ void undoCommand(Command cmd) {
     if (cmd.type == 'c') undoChange(cmd);
     if (cmd.type == 'd') undoDelete(cmd);
 }
-
-void undoChange(Command cmd) {
+/*
+void undoChangeold(Command cmd) {
     EditorRowListNode *row = getRowAt(cmd.arg2);
     EditorRowListNode *toFree;
     int rows = cmd.arg2 - cmd.arg1 + 1;
@@ -500,6 +584,57 @@ void undoChange(Command cmd) {
             row->content = replace->content;
             row = row->prev;
             free(replace);
+        }
+    }
+}
+*/
+void bindNodes(EditorRowListNode *first, EditorRowListNode *second){
+    first->next = second;
+    if(second!=NULL)second->prev = first;
+}
+
+void undoChange(Command cmd) {
+    EditorRowListNode *newTmpStart = getRowAt(cmd.arg1);
+    EditorRowListNode *newTmpEnd = getRowAt(cmd.arg2);
+    EditorRowListNode *firstX = newTmpStart->prev;
+    EditorRowListNode *secondX = newTmpEnd->next;
+    EditorRowListNode *oldChangeStart = changedRowList.head;
+    EditorRowListNode *oldChangeEnd = changedRowList.head;
+    int rows = cmd.arg2-cmd.arg1+1;
+    for(int i = 1; i<rows; i++) oldChangeStart = oldChangeStart->prev;
+    changedRowList.head = oldChangeStart->prev;
+    if(changedRowList.head!=NULL){
+        changedRowList.head->next = NULL;
+    } else {
+        changedRowList.tail = NULL;
+    }
+    changedRowList.length-=rows;
+    if(changedRowList.length == 1) changedRowList.tail = changedRowList.head;
+    if(firstX!=NULL){
+        bindNodes(firstX, oldChangeStart);
+    } else {
+            editorRowList.tail = oldChangeStart;
+            editorRowList.tail->prev = NULL;
+    }
+    bindNodes(oldChangeEnd, secondX);
+    if(secondX==NULL) editorRowList.head = oldChangeEnd;
+    if(tempRowList.head!=NULL){
+        bindNodes(tempRowList.head, newTmpStart);
+    } else {
+        tempRowList.tail = newTmpStart;
+        tempRowList.tail->prev= NULL;
+    }
+    bindNodes(newTmpEnd, NULL);
+    tempRowList.head = newTmpEnd;
+    tempRowList.length+=rows;
+    if(editorRowList.length>0){
+        while( editorRowList.length != 0 &&editorRowList.head->content==NULL){
+            secondX = editorRowList.head;
+            editorRowList.head = editorRowList.head->prev;
+            free(secondX);
+            editorRowList.length--;
+            if(editorRowList.length == 0) editorRowList.tail = NULL;
+            if(editorRowList.length>0)editorRowList.head->next = NULL;
         }
     }
 }
