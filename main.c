@@ -182,7 +182,7 @@ VersionListNode *checkToFreeVersion(VersionListNode *version, VersionListNode **
 EditorRowListNode *checkToFreeRow(EditorRowListNode *row) {
     EditorRowListNode *prev = row->prev;
     VersionListNode *versionToFree = row->versionStackHead;
-    while (versionToFree != NULL) versionToFree = checkToFreeVersion(versionToFree, &row->versionStackHead);
+    while (versionToFree != NULL&&versionToFree->version>=globalVersion) versionToFree = checkToFreeVersion(versionToFree, &row->versionStackHead);
     if (row->versionStackHead == NULL) {
         free(row);
         editorRowList.head = prev;
