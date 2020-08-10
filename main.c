@@ -52,7 +52,7 @@ Command getCommand(char *cmd);
 
 void freeCommands();
 
-VersionListNode *checkToFreeVersion(VersionListNode *version, VersionListNode **head);
+VersionListNode *freeVersion(VersionListNode *version, VersionListNode **head);
 
 EditorRowListNode *checkToFreeRow(EditorRowListNode *row);
 
@@ -169,20 +169,21 @@ void freeCommands() {
     }
 }
 
-VersionListNode *checkToFreeVersion(VersionListNode *version, VersionListNode **head) {
+VersionListNode *freeVersion(VersionListNode *version, VersionListNode **head) {
+    //TODO:removeVersion();
     VersionListNode *prev = version->prev;
-    if (version->version >= globalVersion) {
-        free(version->content);
-        free(version);
-        *head = prev;
-    }
+    *head = prev;
+
+    free(version->content);
+    free(version);
     return prev;
 }
 
 EditorRowListNode *checkToFreeRow(EditorRowListNode *row) {
     EditorRowListNode *prev = row->prev;
+    //TODO:getMaxVersion();
     VersionListNode *versionToFree = row->versionStackHead;
-    while (versionToFree != NULL&&versionToFree->version>=globalVersion) versionToFree = checkToFreeVersion(versionToFree, &row->versionStackHead);
+    while (versionToFree != NULL&&versionToFree->version>=globalVersion) versionToFree = freeVersion(versionToFree, &row->versionStackHead);
     if (row->versionStackHead == NULL) {
         free(row);
         editorRowList.head = prev;
@@ -292,6 +293,7 @@ char *getRowContent() {
 }
 
 VersionListNode *createNewVersion(char *str) {
+    //TODO:insertVersion();
     VersionListNode *versionListNode = (VersionListNode *) malloc(sizeof(VersionListNode));
     versionListNode->content = str;
     versionListNode->version = globalVersion;
@@ -359,6 +361,7 @@ void executePrint(Command cmd) {
 
 void printCorrectVersion(EditorRowListNode *row) {
     VersionListNode *versionToPrint = row->versionStackHead;
+    //TODO:getCorrectVersion();
     while (versionToPrint->version > globalVersion) {
         versionToPrint = versionToPrint->prev;
         if (versionToPrint == NULL) {
