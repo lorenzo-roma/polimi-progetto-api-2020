@@ -1,4 +1,4 @@
-# PoliMi - Progetto di Algoritmi e Strutture Dati - 2019-2020
+# PoliMi - Progetto di Algoritmi e Strutture Dati 2019-2020
 
 Il progetto consiste nell’implementare un semplice editor di testi.
 
