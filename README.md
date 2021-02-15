@@ -46,7 +46,7 @@ Si ha quindi che una sequenza di comandi del tipo
 10u
 5r
 ```
-è a tutti gli effetti equivalente al solo comando 5u. 
+è a tutti gli effetti equivalente al solo comando `5u`. 
 Similmente, la sequenza
 ```
 12u
