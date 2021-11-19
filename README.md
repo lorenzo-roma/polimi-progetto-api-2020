@@ -1,5 +1,5 @@
 # PoliMi - Progetto di Algoritmi e Strutture Dati 2019-2020
-## Final Grade 30L
+## Final Grade received by this project: 30L
 ## Il progetto consiste nell’implementare un semplice editor di testi.
 
 L’editor considera un documento come una sequenza di righe, di dimensione arbitraria, numerate a partire da uno.
